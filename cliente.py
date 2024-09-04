@@ -21,7 +21,6 @@ def main(argv):
             while(True):   
                 pergunta = input("Digite a pergunta a ser enviada ao servidor: ")
                 s.send(pergunta.encode()) #texto.encode - converte a string para bytes
-               
                 resposta = s.recv(BUFFER_SIZE)
                 #texto_recebido = repr(data) #converte de bytes para um formato "printável"
                 resposta_string = resposta.decode("utf-8") #converte os bytes em string
@@ -29,7 +28,6 @@ def main(argv):
 
                 humano_ou_ia = input("A resposta é proveniente de um humano ou de alguma inteligência artificial? ")
                 s.send(humano_ou_ia.encode())
-
                 resposta_certa = s.recv(BUFFER_SIZE).decode('utf-8')
                 #resposta_certa_decodificada = resposta_certa.decode('utf-8')
                 print(resposta_certa)
@@ -37,7 +35,7 @@ def main(argv):
                 continuar_perguntando = input("Deseja fazer uma nova pergunta? ")
                 s.send(continuar_perguntando.encode())
 
-                if continuar_perguntando == 'não' or continuar_perguntando == 'nao':
+                if continuar_perguntando.lower() == 'não' or continuar_perguntando.lower() == 'nao':
                     total_ia = s.recv(BUFFER_SIZE).decode('utf-8')
                     total_humano = s.recv(BUFFER_SIZE).decode('utf-8')
                     total_acertos = s.recv(BUFFER_SIZE).decode('utf-8')

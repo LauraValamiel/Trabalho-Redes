@@ -90,7 +90,7 @@ def avaliar_resposta(resposta_humano_ou_ia, clientsocket):
 
 def continua_teste(clientsocket, addr):
     continuar_perguntando = clientsocket.recv(BUFFER_SIZE).decode('utf-8')
-    if (continuar_perguntando == 'não' or continuar_perguntando == 'nao'):
+    if (continuar_perguntando.lower() == 'não' or continuar_perguntando.lower() == 'nao'):
         print('vai encerrar o socket do cliente {} !'.format(addr[0]))
         clientsocket.close() 
         return False
@@ -109,20 +109,20 @@ def on_new_client(clientsocket,addr):
         try:
             tipo = input("Digite qual modo será usado: automático ou controlado? ")
 
-            if tipo == 'automatico' or tipo == 'automático':
+            if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
                 tempo_espera = float(input("Digite o tempo de espera em segundos para enviar a resposta automática: "))
                 
             pergunta = clientsocket.recv(BUFFER_SIZE)
             if not pergunta:
                 break
 
-            if tipo == 'automatico' or tipo == 'automático':
+            if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
                 time.sleep(tempo_espera)
                 resposta_automatica(pergunta, clientsocket, addr)
                 resposta_humano_ou_ia = 'inteligência artificial'
                 ia += 1
 
-            elif tipo == 'controlado':
+            elif tipo.lower() == 'controlado':
                 resposta_controlada(pergunta, clientsocket, addr)
                 resposta_humano_ou_ia = 'humano'
                 humano += 1
@@ -160,8 +160,8 @@ def main(argv):
                 server_socket.listen()
                 clientsocket, addr = server_socket.accept()
                 print('Conectado ao cliente no endereço:', addr)
-                t = Thread(target=on_new_client, args=(clientsocket,addr))
-                t.start()   
+                cliente_thread = Thread(target=on_new_client, args=(clientsocket,addr))
+                cliente_thread.start()   
     except Exception as error:
         print("Erro na execução do servidor!!")
         print(error)        
