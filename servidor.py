@@ -6,7 +6,7 @@ from threading import Thread
 #import random
 import time
 
-HOST = '192.168.5.104'  # endereço IP
+HOST = '192.168.2.8'  # endereço IP
 PORT = 20000        # Porta utilizada pelo servidor
 BUFFER_SIZE = 1024  # tamanho do buffer para recepção dos dados
 
@@ -27,16 +27,18 @@ def resposta_automatica(pergunta, clientsocket, addr):
     #tempo_espera = float(input("Digite o tempo de espera em segundos para enviar a resposta automática: "))
 
     payload = json.dumps({
-                "messages": [{
-                        "role": "user",
-                        "content": pergunta_recebida
-                    }],
-                "system_prompt": "Responda de forma breve, direta e completa, sem adicionar detalhes desnecessários.",
-                "temperature": 0.4,
+                "messages": [
+                  {
+                    "role": "user",
+                    "content": pergunta_recebida
+                  }
+                ],
+                "system_prompt": "Responda de forma breve, direta e completa, sem adicionar detalhes desnecessários, sem markdown, sem pontos, sem palavras dificeis.",
+                "temperature": 0.2,
                 "top_k": 30,
                 "top_p": 0.4,
-                "max_tokens": 100,
-                "web_access": True
+                "max_tokens": 40,
+                "web_access": False
                 })
 
     headers = {
@@ -46,7 +48,7 @@ def resposta_automatica(pergunta, clientsocket, addr):
          }
     
     conn = http.client.HTTPSConnection("chatgpt-42.p.rapidapi.com")
-    conn.request("POST", "/conversationgpt4-2", payload, headers)
+    conn.request("POST", "/geminipro", payload, headers)
 
     resposta_chat = conn.getresponse()
     data_resposta_chat = resposta_chat.read()
