@@ -88,7 +88,43 @@ def avaliar_resposta(resposta_humano_ou_ia, clientsocket):
         return "Correto!"
     else:
         return "Incorreto"
+    
 
+def historico_perguntas(nome_cliente, pergunta, resposta, resultado):
+    with open("historico_perguntas.txt", "a", encoding="utf-8") as historico:
+        historico.write(f"Nome do usuário: {nome_cliente}\n")
+        historico.write(f"Pergunta: {pergunta}\n")
+        historico.write(f"Resposta: {resposta}\n")
+        historico.write(f"Resultado: {resultado}\n")
+        historico.write('---------------------------------------------------------\n')
+
+
+def ranking_usuarios(nome_cliente, resultado, total_perguntas):
+    ranking = {}
+
+    with open("ranking_usuarios.txt", "a", encoding='utf-8') as r:
+        ranking[nome] = {'total': 1, 'acertos': 1 if acertou else 0}
+        #Er.write(f"{nome_cliente}: [Resultado = {resultado}][Total de perguntas = {total_perguntas}]")
+
+    #lendo o ranking:
+    with open("ranking_usuarios.txt", "r", encoding="utf-8") as r:
+        for linha in r:
+            cliente, resultado, total_perguntas = linha.strip().split(";")
+            ranking[cliente] = {'Resultado': int(resultado), 'Total de perguntas' : int(total_perguntas)}
+        
+    #atualizando os dados do usuario:
+    if nome_cliente in ranking:
+        ranking[cliente][total_perguntas] += total_perguntas
+        if resultado == "Correto!":
+            ranking[cliente][resultado] += 1
+    else:
+        ranking[cliente] = [resultado][total_perguntas]
+
+    ranking_ordenado = sorted(ranking.items(), key=lambda x: (x[1][1] / x[1][0])*100, reverse=True)
+
+    with open("ranking_usuarios.txt", "w", encoding='utf-8') as r:
+        for cliente, (resultado, total_perguntas) in ranking.items():
+            r.write(f"{cliente}: {resultado}; {total_perguntas}\n")
 
 def continua_teste(clientsocket, addr):
     continuar_perguntando = clientsocket.recv(BUFFER_SIZE).decode('utf-8')
@@ -101,11 +137,13 @@ def continua_teste(clientsocket, addr):
 
 def on_new_client(clientsocket,addr):
     
-    nome_cliente(clientsocket)
+    nome_usuario = nome_cliente(clientsocket)
+    print("Nome do usuário: ", nome_usuario)
 
     ia = 0
     humano = 0
     total_acertos = 0
+    total_perguntas = 0
 
     while True:
         try:
@@ -120,14 +158,16 @@ def on_new_client(clientsocket,addr):
 
             if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
                 time.sleep(tempo_espera)
-                resposta_automatica(pergunta, clientsocket, addr)
+                resposta = resposta_automatica(pergunta, clientsocket, addr)
                 resposta_humano_ou_ia = 'inteligência artificial'
                 ia += 1
+                total_perguntas += 1
 
             elif tipo.lower() == 'controlado':
-                resposta_controlada(pergunta, clientsocket, addr)
+                resposta = resposta_controlada(pergunta, clientsocket, addr)
                 resposta_humano_ou_ia = 'humano'
                 humano += 1
+                total_perguntas +=1
 
             else:
                 print("Tipo inválido, tente novamente")
@@ -141,9 +181,15 @@ def on_new_client(clientsocket,addr):
             else:
                 total_acertos = total_acertos
 
-            clientsocket.send(str(ia).encode())
-            clientsocket.send(str(humano).encode())
-            clientsocket.send(str(total_acertos).encode())
+            ia = str(ia)
+            humano = str(humano)
+            total_acertos = str(total_acertos)
+
+            dados = f"Respostas por ia: {ia}\nRespostas por humano: {humano}\nTotal de acertos: {total_acertos}"
+            clientsocket.send(dados.encode())
+
+            historico_perguntas(nome_usuario, pergunta, resposta, resultado)
+            ranking_usuarios(nome_usuario, resultado, total_perguntas)
 
             if not continua_teste(clientsocket, addr):
                 break

@@ -36,12 +36,8 @@ def main(argv):
                 s.send(continuar_perguntando.encode())
 
                 if continuar_perguntando.lower() == 'não' or continuar_perguntando.lower() == 'nao':
-                    total_ia = s.recv(BUFFER_SIZE).decode('utf-8')
-                    total_humano = s.recv(BUFFER_SIZE).decode('utf-8')
-                    total_acertos = s.recv(BUFFER_SIZE).decode('utf-8')
-                    print("Total de respostas provenientes de inteligência artificial: ", total_ia)
-                    print("Total de respostas provenientes de humano: ", total_humano)
-                    print("Total de acertos: ", total_acertos)
+                    dados = s.recv(BUFFER_SIZE).decode('utf-8')
+                    print(dados)
                     print('vai encerrar o socket cliente!')
                     s.close()
                     break
