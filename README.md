@@ -30,13 +30,13 @@ Siga as instruções abaixo para configurar e executar o projeto localmente:
    cd Trabalho-Redes
    ```
 
-3.  **Inicie o servidor de desenvolvimento:**
+2.  **Inicie o servidor de desenvolvimento:**
 
    ```bash
    python servidor.py
    ```
 
-5. **Inicie o cliente:**
+3. **Inicie o cliente:**
 
    ```
    python cliente.py
