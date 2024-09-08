@@ -26,8 +26,6 @@ def resposta_automatica(pergunta, clientsocket, addr):
 
     pergunta_recebida = pergunta.decode('utf-8') # converte os bytes em string
 
-    #tempo_espera = float(input("Digite o tempo de espera em segundos para enviar a resposta automática: "))
-
     payload = json.dumps({
                 "messages": [
                   {
@@ -62,8 +60,6 @@ def resposta_automatica(pergunta, clientsocket, addr):
     resposta_chat_decodificada = resposta_json.get('result')
     data_resposta_chat = resposta_chat_decodificada.encode()
 
-    #time.sleep(tempo_espera)#tirar dessa funçao
-
     clientsocket.send(data_resposta_chat)
 
     print('Pergunta recebida do cliente {} na porta {}: {}'.format(addr[0], addr[1],pergunta_recebida))
@@ -77,19 +73,15 @@ def resposta_controlada(pergunta, clientsocket, addr):
     pergunta_recebida = pergunta.decode('utf-8') # converte os bytes em string
     print('Pergunta recebida do cliente {} na porta {}: {}'.format(addr[0], addr[1],pergunta_recebida))
     resposta_servidor = input('Digite a resposta: ')
-    #data_resposta = resposta.read()
     data_resposta_servidor = resposta_servidor.encode()
     # envia o mesmo texto ao cliente           
     clientsocket.send(data_resposta_servidor)
-    #resposta_humano_ou_ia = 'humano'#ficar fora, no if controlado
-    #humano += 1#igual o comentário de cima
+    
     return 'humano'
 
 
 def avaliar_resposta(resposta_humano_ou_ia, clientsocket):
     humano_ou_ia = clientsocket.recv(BUFFER_SIZE).decode('utf-8')
-    #if not humano_ou_ia:
-     #   break
 
     if humano_ou_ia == resposta_humano_ou_ia:
         return "Correto!"
@@ -100,13 +92,13 @@ def avaliar_resposta(resposta_humano_ou_ia, clientsocket):
 def historico_perguntas(nome_cliente, pergunta, resposta, resultado):
     with open("historico_perguntas.txt", "a", encoding="utf-8") as historico:
         historico.write(f"Nome do usuário: {nome_cliente}\n")
-        historico.write(f"Pergunta: {pergunta}\n")
+        historico.write(f"Pergunta: {pergunta.decode("utf-8")}\n")
         historico.write(f"Resposta: {resposta}\n")
         historico.write(f"Resultado: {resultado}\n")
         historico.write('---------------------------------------------------------\n')
 
 
-def ranking_usuarios(nome_cliente, resultado, total_perguntas):
+def ranking_usuarios(nome_cliente, resultado):
     ranking = {}
 
     if os.path.exists("ranking_usuarios.json") and os.path.getsize("ranking_usuarios.json") > 0:
@@ -149,6 +141,13 @@ def continua_teste(clientsocket, addr, ia, humano, total_acertos):
         return False
     return True 
 
+def resposta_ia(clientsocket, addr, tempo_espera):
+    pergunta = clientsocket.recv(BUFFER_SIZE)
+    if not pergunta:
+        return
+    time.sleep(tempo_espera)
+    resposta = resposta_automatica(pergunta, clientsocket, addr)
+    return resposta, pergunta
 
 def on_new_client(clientsocket,addr):
     
@@ -158,39 +157,55 @@ def on_new_client(clientsocket,addr):
     humano = 0
     total_acertos = 0
     total_perguntas = 0
+    tempo_espera = 0
     tipo = ''
+    tipo_controlado = ''
     pergunta = ''
+    aux_ia = False
+    
     while True:
         try:
             while tipo.lower() != 'automatico' and tipo.lower() != 'automático' and tipo.lower() != 'controlado':
                 tipo = input("Digite qual modo será usado: automático ou controlado? ")
 
-            
-                if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
+                if tipo.lower() != 'automatico' and tipo.lower() != 'automático' and tipo.lower() != 'controlado':
+                    print("Tipo inválido, tente novamente")
+
+
+            if tipo.lower() == 'automatico' or tipo.lower() == 'automático' :
+                if not aux_ia:
                     tempo_espera = float(input("Digite o tempo de espera em segundos para enviar a resposta automática: "))
+                resposta, pergunta = resposta_ia(clientsocket, addr, tempo_espera)
+                resposta_humano_ou_ia = 'inteligência artificial'
+                ia += 1
+                total_perguntas += 1
+                aux_ia = True
 
-                if not pergunta:
-                    pergunta = clientsocket.recv(BUFFER_SIZE)
-                if not pergunta:
-                    break
+            elif tipo.lower() == 'controlado':
+                while tipo_controlado != '1' and tipo_controlado != '2':
+                    tipo_controlado = input("Você deseja: 1 - Responder você ou 2 - Enviar para IA? ")
 
-                if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
-                    time.sleep(tempo_espera)
-                    resposta = resposta_automatica(pergunta, clientsocket, addr)
-                    resposta_humano_ou_ia = 'inteligência artificial'
-                    ia += 1
-                    total_perguntas += 1
-
-                elif tipo.lower() == 'controlado':
+                    if tipo_controlado != '1' and tipo_controlado != '2':
+                        print("Opção inválida, tente novamente")
+                
+                if tipo_controlado == '1':
+                    if not pergunta:
+                        pergunta = clientsocket.recv(BUFFER_SIZE)
+                    if not pergunta:
+                        break
                     resposta = resposta_controlada(pergunta, clientsocket, addr)
                     resposta_humano_ou_ia = 'humano'
                     humano += 1
                     total_perguntas +=1
-
                 else:
-                    print("Tipo inválido, tente novamente")
+                    tempo_espera = float(input("Digite o tempo de espera em segundos para enviar a resposta automática: "))
+                    resposta, pergunta = resposta_ia(clientsocket, addr, tempo_espera)
+                    resposta_humano_ou_ia = 'inteligência artificial'
+                    ia += 1
+                    total_perguntas += 1
 
-
+                tipo_controlado = ''
+                
             resultado = avaliar_resposta(resposta_humano_ou_ia, clientsocket)
             clientsocket.send(resultado.encode())
 
@@ -200,9 +215,8 @@ def on_new_client(clientsocket,addr):
                 total_acertos = total_acertos
 
             historico_perguntas(nome_usuario, pergunta, resposta, resultado)
-            ranking_usuarios(nome_usuario, resultado, total_perguntas)
+            ranking_usuarios(nome_usuario, resultado)
 
-            tipo = ''
             pergunta = ''
 
             if not continua_teste(clientsocket, addr, ia, humano, total_acertos):

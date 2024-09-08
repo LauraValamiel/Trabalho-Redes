@@ -22,14 +22,12 @@ def main(argv):
                 pergunta = input("Digite a pergunta a ser enviada ao servidor: ")
                 s.send(pergunta.encode()) #texto.encode - converte a string para bytes
                 resposta = s.recv(BUFFER_SIZE)
-                #texto_recebido = repr(data) #converte de bytes para um formato "printável"
                 resposta_string = resposta.decode("utf-8") #converte os bytes em string
                 print('Resposta: ', resposta_string)
 
                 humano_ou_ia = input("A resposta é proveniente de um humano ou de alguma inteligência artificial? ")
                 s.send(humano_ou_ia.encode())
                 resposta_certa = s.recv(BUFFER_SIZE).decode('utf-8')
-                #resposta_certa_decodificada = resposta_certa.decode('utf-8')
                 print(resposta_certa)
 
                 continuar_perguntando = input("Deseja fazer uma nova pergunta? ")
