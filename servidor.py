@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 #__author__ = ""
 
+import json
+import os
 import socket, sys
 from threading import Thread
 #import random
 import time
 
-HOST = '192.168.2.8'  # endereço IP
+HOST = '192.168.2.10'  # endereço IP
 PORT = 20000        # Porta utilizada pelo servidor
 BUFFER_SIZE = 1024  # tamanho do buffer para recepção dos dados
 
@@ -14,8 +16,8 @@ BUFFER_SIZE = 1024  # tamanho do buffer para recepção dos dados
 def nome_cliente(clientsocket):
     nome_recebido = clientsocket.recv(BUFFER_SIZE)
     nome_usuario = nome_recebido.decode('utf-8')
-
-    print("Nome do usuario:   ", nome_usuario)
+    print("Nome do usuario: ", nome_usuario)
+    return nome_usuario
 
 def resposta_automatica(pergunta, clientsocket, addr):
     import http.client
@@ -42,7 +44,7 @@ def resposta_automatica(pergunta, clientsocket, addr):
                 })
 
     headers = {
-        'x-rapidapi-key': "b6c836e2ddmsh31618408073819cp19a7cajsnda690adc24f9",
+        'x-rapidapi-key': "654b536e19msha5f523bc5c93f27p1d6ad4jsn34831a809905",
         'x-rapidapi-host': "chatgpt-42.p.rapidapi.com",
         'Content-Type': "application/json"
          }
@@ -55,6 +57,11 @@ def resposta_automatica(pergunta, clientsocket, addr):
 
     resposta_chat_decodificada = data_resposta_chat.decode("utf-8")
 
+    resposta_json = json.loads(resposta_chat_decodificada)
+
+    resposta_chat_decodificada = resposta_json.get('result')
+    data_resposta_chat = resposta_chat_decodificada.encode()
+
     #time.sleep(tempo_espera)#tirar dessa funçao
 
     clientsocket.send(data_resposta_chat)
@@ -63,7 +70,7 @@ def resposta_automatica(pergunta, clientsocket, addr):
                 
     print('Resposta: ', resposta_chat_decodificada)
 
-    return 'inteliência artificial'
+    return 'inteligência artificial'
 
 
 def resposta_controlada(pergunta, clientsocket, addr):
@@ -102,33 +109,41 @@ def historico_perguntas(nome_cliente, pergunta, resposta, resultado):
 def ranking_usuarios(nome_cliente, resultado, total_perguntas):
     ranking = {}
 
-    with open("ranking_usuarios.txt", "a", encoding='utf-8') as r:
-        ranking[nome] = {'total': 1, 'acertos': 1 if acertou else 0}
-        #Er.write(f"{nome_cliente}: [Resultado = {resultado}][Total de perguntas = {total_perguntas}]")
-
-    #lendo o ranking:
-    with open("ranking_usuarios.txt", "r", encoding="utf-8") as r:
-        for linha in r:
-            cliente, resultado, total_perguntas = linha.strip().split(";")
-            ranking[cliente] = {'Resultado': int(resultado), 'Total de perguntas' : int(total_perguntas)}
-        
-    #atualizando os dados do usuario:
-    if nome_cliente in ranking:
-        ranking[cliente][total_perguntas] += total_perguntas
-        if resultado == "Correto!":
-            ranking[cliente][resultado] += 1
+    if os.path.exists("ranking_usuarios.json") and os.path.getsize("ranking_usuarios.json") > 0:
+        with open("ranking_usuarios.json", "r") as r:
+            ranking = json.load(r)  
     else:
-        ranking[cliente] = [resultado][total_perguntas]
+        ranking = {}  
+    
+    if nome_cliente in ranking:
+        ranking[nome_cliente]['Total'] += 1
+        if resultado == 'Correto!':
+            ranking[nome_cliente]['Acertos'] += 1 
+            ranking[nome_cliente]['Porcentagem_de_acertos'] = (ranking[nome_cliente]['Acertos'] / ranking[nome_cliente]['Total']) * 100
+        else:
+            ranking[nome_cliente]['Porcentagem_de_acertos'] = (ranking[nome_cliente]['Acertos'] / ranking[nome_cliente]['Total']) * 100
+    else:
+        if resultado == 'Correto!':
+            ranking[nome_cliente] = {'Posicao': 0, 'Total': 1, 'Acertos': 1, 'Porcentagem_de_acertos': 100}
+        else:
+            ranking[nome_cliente] = {'Posicao': 0,'Total': 1, 'Acertos': 0, 'Porcentagem_de_acertos': 0}
+    ranking_ordenado = dict(sorted(ranking.items(), key=lambda x: (x[1]['Acertos'], x[1]['Porcentagem_de_acertos']), reverse=True))
 
-    ranking_ordenado = sorted(ranking.items(), key=lambda x: (x[1][1] / x[1][0])*100, reverse=True)
+    key = list(ranking_ordenado.keys())
+    for user in ranking_ordenado:
+        ranking_ordenado[user]['Posicao'] = key.index(user) + 1
 
-    with open("ranking_usuarios.txt", "w", encoding='utf-8') as r:
-        for cliente, (resultado, total_perguntas) in ranking.items():
-            r.write(f"{cliente}: {resultado}; {total_perguntas}\n")
+    with open("ranking_usuarios.json", "w") as r:
+        json.dump(ranking_ordenado, r, indent=4)
 
-def continua_teste(clientsocket, addr):
+def continua_teste(clientsocket, addr, ia, humano, total_acertos):
     continuar_perguntando = clientsocket.recv(BUFFER_SIZE).decode('utf-8')
     if (continuar_perguntando.lower() == 'não' or continuar_perguntando.lower() == 'nao'):
+        ia = str(ia)
+        humano = str(humano)
+        total_acertos = str(total_acertos)
+        dados = f"Respostas por ia: {ia}\nRespostas por humano: {humano}\nTotal de acertos: {total_acertos}"
+        clientsocket.send(dados.encode())
         print('vai encerrar o socket do cliente {} !'.format(addr[0]))
         clientsocket.close() 
         return False
@@ -138,40 +153,43 @@ def continua_teste(clientsocket, addr):
 def on_new_client(clientsocket,addr):
     
     nome_usuario = nome_cliente(clientsocket)
-    print("Nome do usuário: ", nome_usuario)
 
     ia = 0
     humano = 0
     total_acertos = 0
     total_perguntas = 0
-
+    tipo = ''
+    pergunta = ''
     while True:
         try:
-            tipo = input("Digite qual modo será usado: automático ou controlado? ")
+            while tipo.lower() != 'automatico' and tipo.lower() != 'automático' and tipo.lower() != 'controlado':
+                tipo = input("Digite qual modo será usado: automático ou controlado? ")
 
-            if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
-                tempo_espera = float(input("Digite o tempo de espera em segundos para enviar a resposta automática: "))
-                
-            pergunta = clientsocket.recv(BUFFER_SIZE)
-            if not pergunta:
-                break
+            
+                if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
+                    tempo_espera = float(input("Digite o tempo de espera em segundos para enviar a resposta automática: "))
 
-            if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
-                time.sleep(tempo_espera)
-                resposta = resposta_automatica(pergunta, clientsocket, addr)
-                resposta_humano_ou_ia = 'inteligência artificial'
-                ia += 1
-                total_perguntas += 1
+                if not pergunta:
+                    pergunta = clientsocket.recv(BUFFER_SIZE)
+                if not pergunta:
+                    break
 
-            elif tipo.lower() == 'controlado':
-                resposta = resposta_controlada(pergunta, clientsocket, addr)
-                resposta_humano_ou_ia = 'humano'
-                humano += 1
-                total_perguntas +=1
+                if tipo.lower() == 'automatico' or tipo.lower() == 'automático':
+                    time.sleep(tempo_espera)
+                    resposta = resposta_automatica(pergunta, clientsocket, addr)
+                    resposta_humano_ou_ia = 'inteligência artificial'
+                    ia += 1
+                    total_perguntas += 1
 
-            else:
-                print("Tipo inválido, tente novamente")
-                continue
+                elif tipo.lower() == 'controlado':
+                    resposta = resposta_controlada(pergunta, clientsocket, addr)
+                    resposta_humano_ou_ia = 'humano'
+                    humano += 1
+                    total_perguntas +=1
+
+                else:
+                    print("Tipo inválido, tente novamente")
+
 
             resultado = avaliar_resposta(resposta_humano_ou_ia, clientsocket)
             clientsocket.send(resultado.encode())
@@ -181,17 +199,13 @@ def on_new_client(clientsocket,addr):
             else:
                 total_acertos = total_acertos
 
-            ia = str(ia)
-            humano = str(humano)
-            total_acertos = str(total_acertos)
-
-            dados = f"Respostas por ia: {ia}\nRespostas por humano: {humano}\nTotal de acertos: {total_acertos}"
-            clientsocket.send(dados.encode())
-
             historico_perguntas(nome_usuario, pergunta, resposta, resultado)
             ranking_usuarios(nome_usuario, resultado, total_perguntas)
 
-            if not continua_teste(clientsocket, addr):
+            tipo = ''
+            pergunta = ''
+
+            if not continua_teste(clientsocket, addr, ia, humano, total_acertos):
                 break
 
         except Exception as error:
