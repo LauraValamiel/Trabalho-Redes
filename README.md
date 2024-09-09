@@ -12,7 +12,7 @@ Esse repositorio contém uma aplicação cliente servidor do **Teste de Turing**
 
 - Servidor conecta na API do Gemini Pro.
 - Servidor decide se a resposta vira de uma IA ou de um usuário.
-- Cliente faz uma pergunta e tenta adivinhar de ont=de a rsposta é proveniente.
+- Cliente faz uma pergunta e tenta adivinhar de onde a rsposta é proveniente.
 
 ## Instalação
 
