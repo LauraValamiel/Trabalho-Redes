@@ -8,7 +8,7 @@ from threading import Thread
 #import random
 import time
 
-HOST = '192.168.2.10'  # endereço IP
+HOST = '192.168.2.8'  # endereço IP
 PORT = 20000        # Porta utilizada pelo servidor
 BUFFER_SIZE = 1024  # tamanho do buffer para recepção dos dados
 
@@ -90,9 +90,10 @@ def avaliar_resposta(resposta_humano_ou_ia, clientsocket):
     
 
 def historico_perguntas(nome_cliente, pergunta, resposta, resultado):
+    pergunta = pergunta.decode("utf-8")
     with open("historico_perguntas.txt", "a", encoding="utf-8") as historico:
         historico.write(f"Nome do usuário: {nome_cliente}\n")
-        historico.write(f"Pergunta: {pergunta.decode("utf-8")}\n")
+        historico.write(f"Pergunta: {pergunta}\n")
         historico.write(f"Resposta: {resposta}\n")
         historico.write(f"Resultado: {resultado}\n")
         historico.write('---------------------------------------------------------\n')
