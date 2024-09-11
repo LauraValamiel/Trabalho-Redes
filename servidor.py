@@ -12,13 +12,14 @@ HOST = '192.168.2.8'  # endereço IP
 PORT = 20000        # Porta utilizada pelo servidor
 BUFFER_SIZE = 1024  # tamanho do buffer para recepção dos dados
 
-
+#Registra o nome do cliente conectado
 def nome_cliente(clientsocket):
     nome_recebido = clientsocket.recv(BUFFER_SIZE)
     nome_usuario = nome_recebido.decode('utf-8')
     print("Nome do usuario: ", nome_usuario)
     return nome_usuario
 
+#Caso o usuário opte pela resposta automatica entra nessa função
 def resposta_automatica(pergunta, clientsocket, addr):
     import http.client
 
@@ -26,6 +27,8 @@ def resposta_automatica(pergunta, clientsocket, addr):
 
     pergunta_recebida = pergunta.decode('utf-8') # converte os bytes em string
 
+    #Cria um plyload que solicita uma resposta bem simples da IA
+    #IA utilizada: Gemini Pro
     payload = json.dumps({
                 "messages": [
                   {
@@ -68,7 +71,7 @@ def resposta_automatica(pergunta, clientsocket, addr):
 
     return 'inteligência artificial'
 
-
+#Caso o usuário opte por ele mesmo responder
 def resposta_controlada(pergunta, clientsocket, addr):
     pergunta_recebida = pergunta.decode('utf-8') # converte os bytes em string
     print('Pergunta recebida do cliente {} na porta {}: {}'.format(addr[0], addr[1],pergunta_recebida))
@@ -79,7 +82,7 @@ def resposta_controlada(pergunta, clientsocket, addr):
     
     return 'humano'
 
-
+#Avalia se a resposta do cliente está ou não correta
 def avaliar_resposta(resposta_humano_ou_ia, clientsocket):
     humano_ou_ia = clientsocket.recv(BUFFER_SIZE).decode('utf-8')
 
@@ -88,7 +91,7 @@ def avaliar_resposta(resposta_humano_ou_ia, clientsocket):
     else:
         return "Incorreto"
     
-
+#Armazena o histórico das perguntas
 def historico_perguntas(nome_cliente, pergunta, resposta, resultado):
     pergunta = pergunta.decode("utf-8")
     with open("historico_perguntas.txt", "a", encoding="utf-8") as historico:
@@ -98,7 +101,7 @@ def historico_perguntas(nome_cliente, pergunta, resposta, resultado):
         historico.write(f"Resultado: {resultado}\n")
         historico.write('---------------------------------------------------------\n')
 
-
+#Armazena o ranking dos usuarios ordenado
 def ranking_usuarios(nome_cliente, resultado):
     ranking = {}
 
@@ -129,6 +132,7 @@ def ranking_usuarios(nome_cliente, resultado):
     with open("ranking_usuarios.json", "w") as r:
         json.dump(ranking_ordenado, r, indent=4)
 
+#Caso o cliente opte por continuar perguntando 
 def continua_teste(clientsocket, addr, ia, humano, total_acertos):
     continuar_perguntando = clientsocket.recv(BUFFER_SIZE).decode('utf-8')
     if (continuar_perguntando.lower() == 'não' or continuar_perguntando.lower() == 'nao'):
@@ -142,6 +146,7 @@ def continua_teste(clientsocket, addr, ia, humano, total_acertos):
         return False
     return True 
 
+#Nas perguntas respondidas por IA, seta o tempo de espera que o usuário selecionou para se assemelhar a um humano
 def resposta_ia(clientsocket, addr, tempo_espera):
     pergunta = clientsocket.recv(BUFFER_SIZE)
     if not pergunta:
@@ -150,6 +155,7 @@ def resposta_ia(clientsocket, addr, tempo_espera):
     resposta = resposta_automatica(pergunta, clientsocket, addr)
     return resposta, pergunta
 
+#Fluxo principal, sempre que um cliente conecta no servidor
 def on_new_client(clientsocket,addr):
     
     nome_usuario = nome_cliente(clientsocket)
@@ -237,6 +243,7 @@ def main(argv):
                 server_socket.listen()
                 clientsocket, addr = server_socket.accept()
                 print('Conectado ao cliente no endereço:', addr)
+                #Cada cliente é uma Thread
                 cliente_thread = Thread(target=on_new_client, args=(clientsocket,addr))
                 cliente_thread.start()   
     except Exception as error:
