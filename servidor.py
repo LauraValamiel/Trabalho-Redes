@@ -8,7 +8,7 @@ from threading import Thread
 #import random
 import time
 
-HOST = '192.168.2.8'  # endereço IP
+HOST = '192.168.1.122'  # endereço IP
 PORT = 20000        # Porta utilizada pelo servidor
 BUFFER_SIZE = 1024  # tamanho do buffer para recepção dos dados
 
@@ -89,7 +89,7 @@ def avaliar_resposta(resposta_humano_ou_ia, clientsocket):
     if humano_ou_ia == resposta_humano_ou_ia:
         return "Correto!"
     else:
-        return "Incorreto"
+        return "Incorreto!"
     
 #Armazena o histórico das perguntas
 def historico_perguntas(nome_cliente, pergunta, resposta, resultado):
@@ -123,7 +123,7 @@ def ranking_usuarios(nome_cliente, resultado):
             ranking[nome_cliente] = {'Posicao': 0, 'Total': 1, 'Acertos': 1, 'Porcentagem_de_acertos': 100}
         else:
             ranking[nome_cliente] = {'Posicao': 0,'Total': 1, 'Acertos': 0, 'Porcentagem_de_acertos': 0}
-    ranking_ordenado = dict(sorted(ranking.items(), key=lambda x: (x[1]['Acertos'], x[1]['Porcentagem_de_acertos']), reverse=True))
+    ranking_ordenado = dict(sorted(ranking.items(), key=lambda x: (x[1]['Porcentagem_de_acertos'], x[1]['Acertos']), reverse=True))
 
     key = list(ranking_ordenado.keys())
     for user in ranking_ordenado:
@@ -204,7 +204,7 @@ def on_new_client(clientsocket,addr):
                     resposta_humano_ou_ia = 'humano'
                     humano += 1
                     total_perguntas +=1
-                else:
+                elif tipo_controlado == '2':
                     tempo_espera = float(input("Digite o tempo de espera em segundos para enviar a resposta automática: "))
                     resposta, pergunta = resposta_ia(clientsocket, addr, tempo_espera)
                     resposta_humano_ou_ia = 'inteligência artificial'

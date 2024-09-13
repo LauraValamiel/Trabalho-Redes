@@ -5,7 +5,7 @@ import socket, sys
 import time
 
 
-HOST = '192.168.2.8'  # endereço IP
+HOST = '192.168.1.122'  # endereço IP
 PORT = 20000        # Porta utilizada pelo servidor
 BUFFER_SIZE = 1024  # tamanho do buffer para recepção dos dados
 
